@@ -16,7 +16,7 @@ class Channel:
             self.title = snippet['title']
             self.description = snippet['description']
             self.view_count = statistics['viewCount']
-            self.subscriber_count = statistics['subscriberCount']
+            self.subscriber_count = int(statistics['subscriberCount']) if 'subscriberCount' in statistics else 0
             self.video_count = statistics['videoCount']
             self.url = f"https://www.youtube.com/channel/{self.channel_id}"
 
@@ -60,3 +60,36 @@ class Channel:
 
         with open(filename, 'w', encoding='utf-8') as file:
             json.dump(data, file, ensure_ascii=False, indent=4)
+
+    def __str__(self):
+        return f"{self.title} ({self.url})"
+
+    def __add__(self, other):
+        if isinstance(other, Channel):
+            return self.subscriber_count + other.subscriber_count
+        return NotImplemented
+
+    def __sub__(self, other):
+        if isinstance(other, Channel):
+            return self.subscriber_count - other.subscriber_count
+        return NotImplemented
+
+    def __lt__(self, other):
+        if isinstance(other, Channel):
+            return self.subscriber_count < other.subscriber_count
+        return NotImplemented
+
+    def __le__(self, other):
+        if isinstance(other, Channel):
+            return self.subscriber_count <= other.subscriber_count
+        return NotImplemented
+
+    def __gt__(self, other):
+        if isinstance(other, Channel):
+            return self.subscriber_count > other.subscriber_count
+        return NotImplemented
+
+    def __ge__(self, other):
+        if isinstance(other, Channel):
+            return self.subscriber_count >= other.subscriber_count
+        return NotImplemented

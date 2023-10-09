@@ -2,8 +2,8 @@ from src.channel import Channel
 
 if __name__ == '__main__':
     # Создаем два экземпляра класса
-    moscowpython = Channel('UC-OVMPlMA3-YCIeg4z5z23A')
-    highload = Channel('UCwHL6WHUarjGfUM_586me8w')
+    moscowpython = Channel('UC-OVMPlMA3-YCIeg4z5z23A', "AIzaSyAuL2OjFeSiPj6_RbqicyelyX0pmeDkboA")
+    highload = Channel('UCwHL6WHUarjGfUM_586me8w', "AIzaSyAuL2OjFeSiPj6_RbqicyelyX0pmeDkboA")
 
     # Используем различные магические методы
     print(moscowpython)  # 'MoscowPython (https://www.youtube.com/channel/UC-OVMPlMA3-YCIeg4z5z23A)'
