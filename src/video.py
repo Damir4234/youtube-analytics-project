@@ -1,4 +1,6 @@
 import requests
+import os
+
 
 class Video:
     def __init__(self, video_id):
@@ -6,7 +8,8 @@ class Video:
         self.title, self.views, self.likes = self.get_video_info()
 
     def get_video_info(self):
-        api_key = "AIzaSyAuL2OjFeSiPj6_RbqicyelyX0pmeDkboA"
+
+        api_key = os.environ.get('api_you')
         url = f'https://www.googleapis.com/youtube/v3/videos?key={api_key}&part=snippet,statistics&id={self.video_id}'
         response = requests.get(url)
         data = response.json()
@@ -23,6 +26,7 @@ class Video:
 
     def __str__(self):
         return self.title
+
 
 class PLVideo(Video):
     def __init__(self, video_id, playlist_id):
