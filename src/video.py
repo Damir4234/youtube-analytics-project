@@ -34,7 +34,6 @@ class Video:
         return service
 
     def __str__(self) -> str:
-        """Шаблон: <название_видео>."""
         return self.title
 
 
