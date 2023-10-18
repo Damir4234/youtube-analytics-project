@@ -3,7 +3,7 @@ from googleapiclient.discovery import build
 
 class Video:
     """Класс для работы с видео из YouTube."""
-    YT_API_KEY = os.getenv('api_you')
+    __YT_API_KEY = os.getenv('api_you')
 
     def __init__(self, video_id: str) -> None:
         """Видео инициализируется ID и далее через API."""
@@ -30,7 +30,7 @@ class Video:
     @classmethod
     def get_service(cls) -> build:
         """Возвращает объект для работы с YouTube API."""
-        service = build('youtube', 'v3', developerKey=cls.YT_API_KEY)
+        service = build('youtube', 'v3', developerKey=cls.__YT_API_KEY)
         return service
 
     def __str__(self) -> str:
