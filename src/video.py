@@ -1,31 +1,42 @@
-import requests
 import os
-
+from googleapiclient.discovery import build
 
 class Video:
-    def __init__(self, video_id):
-        self.video_id = video_id
-        self.title, self.views, self.likes = self.get_video_info()
+    """Класс для работы с видео из YouTube."""
+    YT_API_KEY = os.getenv('api_you')
 
-    def get_video_info(self):
+    def __init__(self, video_id: str) -> None:
+        """Видео инициализируется ID и далее через API."""
+        self.__video_id = video_id
+        self._init_from_api()
 
-        api_key = os.environ.get('api_you')
-        url = f'https://www.googleapis.com/youtube/v3/videos?key={api_key}&part=snippet,statistics&id={self.video_id}'
-        response = requests.get(url)
-        data = response.json()
+    def _init_from_api(self):
+        """Получаем данные по API и инициализируем экземпляр класса ими."""
+        service = self.get_service()
+        video_response = service.videos().list(
+            part='snippet,statistics',
+            id=self.__video_id
+        ).execute()
 
-        if 'items' in data and data['items']:
-            snippet = data['items'][0]['snippet']
-            title = snippet['title']
-            statistics = data['items'][0]['statistics']
-            views = statistics['viewCount']
-            likes = statistics['likeCount']
-            return title, views, likes
-        else:
-            return None, None, None
+        video_data = video_response['items'][0]
+        snippet = video_data['snippet']
+        statistics = video_data['statistics']
 
-    def __str__(self):
+        self.title = snippet['title']
+        self.url = f'https://youtu.be/{self.__video_id}'
+        self.view_count = statistics['viewCount']
+        self.like_count = statistics['likeCount']
+
+    @classmethod
+    def get_service(cls) -> build:
+        """Возвращает объект для работы с YouTube API."""
+        service = build('youtube', 'v3', developerKey=cls.YT_API_KEY)
+        return service
+
+    def __str__(self) -> str:
+        """Шаблон: <название_видео>."""
         return self.title
+
 
 
 class PLVideo(Video):
