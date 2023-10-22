@@ -1,79 +1,76 @@
-import datetime
-import requests
-import os
+import datetime, os, isodate
+from googleapiclient.discovery import build
 
 
-class PlayList:
-    def __init__(self, playlist_id):
-        self.playlist_id = playlist_id
-        self.title = self.get_playlist_title()
-        self.url = f"https://www.youtube.com/playlist?list={playlist_id}"
+class APIMixin:
+    """Класс-миксин для предоставления доступа к API."""
+
+    __API_KEY: str = os.getenv('api_you')
+
+    @classmethod
+    def get_service(cls) -> build:
+        """Возвращает объект для работы с API youtube."""
+        service = build('youtube', 'v3', developerKey=cls.__API_KEY)
+        return service
+
+
+class PlayList(APIMixin):
+    """Класс для работы с плей-листами ютуба."""
+
+    def __init__(self, playlist_id: str) -> None:
+        """Инициализируем id плейлиста и результатами запроса по API."""
+        self.__playlist_id = playlist_id
+        self._init_from_api()
+
+    def _init_from_api(self) -> None:
+        """Получаем данные по API и инициализируем ими экземпляр класса."""
+        playlist_info = self.get_service().playlists().list(id=self.__playlist_id,
+                                                            part='snippet',
+                                                            ).execute()
+        self.title = playlist_info['items'][0]['snippet']['title']
+        self.url = f'https://www.youtube.com/playlist?list={self.__playlist_id}'
+        self.__playlist_videos = self.get_service().playlistItems().list(playlistId=self.__playlist_id,
+                                                                         part='contentDetails',
+                                                                         maxResults=50, ).execute()
 
     @property
-    def total_duration(self):
+    def total_duration(self) -> datetime.timedelta:
+        """Возвращает суммарную длительность плей-листа в формате 'datetime.timedelta' (hh:mm:ss))."""
+        video_response = self._get_playlist_videos()
 
-        response = requests.get(
-            f"https://www.googleapis.com/youtube/v3/playlistItems?part=contentDetails&maxResults=50&playlistId={self.playlist_id}&key={os.getenv('api_you')}")
-        data = response.json()
+        duration = datetime.timedelta()
+        for video in video_response['items']:
+            # Длительности YouTube-видео представлены в ISO 8601 формате
+            iso_8601_duration = video['contentDetails']['duration']
+            duration += isodate.parse_duration(iso_8601_duration)
 
-        total_seconds = 0
-        for item in data['items']:
-            video_id = item['contentDetails']['videoId']
-            video_duration = self._get_video_duration(video_id)
-            total_seconds += video_duration
+        return duration
 
-        return datetime.timedelta(seconds=total_seconds)
+    def show_best_video(self) -> str:
+        """Выводит ссылку на самое залайканое видео в плейлисте."""
+        video_response = self._get_playlist_videos()
 
-    def _get_video_likes(self, video_id):
-        response = requests.get(
-            f"https://www.googleapis.com/youtube/v3/videos?part=statistics&id={video_id}&key={os.getenv('api_you')}")
-        data = response.json()
-        likes = data['items'][0]['statistics']['likeCount']
-        return int(likes)
-
-    def show_best_video(self):
-        # Получение информации о видеозаписях в плейлисте
-        response = requests.get(
-            f"https://www.googleapis.com/youtube/v3/playlistItems?part=contentDetails&maxResults=50&playlistId={self.playlist_id}&key={os.getenv('api_you')}")
-        data = response.json()
-
-        best_video = None
         max_likes = 0
-        for item in data['items']:
-            video_id = item['contentDetails']['videoId']
-            video_likes = self._get_video_likes(video_id)
-            if video_likes > max_likes:
-                max_likes = video_likes
-                best_video = video_id
+        video_id = ''
+        for video in video_response['items']:
+            like_count = int(video['statistics']['likeCount'])
+            if like_count > max_likes:
+                max_likes = like_count
+                video_id = video['id']
 
-        return f"https://youtu.be/{best_video}"
+        return f'https://youtu.be/{video_id}'
 
-    def get_playlist_title(self):
-        response = requests.get(
-            f"https://www.googleapis.com/youtube/v3/playlists?part=snippet&id={self.playlist_id}&key={os.getenv('api_you')}")
-        data = response.json()
-        return data['items'][0]['snippet']['title']
+    def _get_playlist_videos(self) -> dict:
+        """Возвращает ответ API на запрос всех видео плей-листа."""
+        playlist_videos = self.get_service().playlistItems().list(playlistId=self.__playlist_id,
+                                                                  part='contentDetails',
+                                                                  maxResults=50,
+                                                                  ).execute()
 
-    def _get_video_duration(self, video_id):
-        response = requests.get(
-            f"https://www.googleapis.com/youtube/v3/videos?part=contentDetails&id={video_id}&key={os.getenv('api_you')}")
-        data = response.json()
-        duration = data['items'][0]['contentDetails']['duration']
-        return self._duration_to_seconds(duration)
-
-    def _duration_to_seconds(self, duration_str):
-        time_parts = duration_str.split('T')[1]
-        hours, minutes, seconds = 0, 0, 0
-
-        if 'H' in time_parts:
-            hours = int(time_parts.split('H')[0])
-            time_parts = time_parts.split('H')[1]
-
-        if 'M' in time_parts:
-            minutes = int(time_parts.split('M')[0])
-            time_parts = time_parts.split('M')[1]
-
-        if 'S' in time_parts:
-            seconds = int(time_parts.split('S')[0])
-
-        return hours * 3600 + minutes * 60 + seconds
+        # получить все id видеороликов из плейлиста
+        video_ids: list[str] = [video['contentDetails']['videoId'] for video in playlist_videos['items']]
+        # получит данные по каждому видео
+        video_response = self.get_service().videos().list(part='contentDetails,statistics',
+                                                          id=','.join(video_ids)
+                                                          ).execute()
+        return video_response
